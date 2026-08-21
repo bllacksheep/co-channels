@@ -10,12 +10,18 @@ typedef struct chan {
 
 
 void send(unbuffered_t *chan, void *data) {
+	// lock
+	
 
+	// unlock
 }
 
 // can I use <- for this
-void *receive(unbuffered_t *chan) {
+void *recv(unbuffered_t *chan) {
+	// lock
+	
 
+	// unlock
 	return;
 }
 
@@ -25,7 +31,7 @@ int main()
 	
 	send(xch, (void*)1);		// xch <- 1
 
-	int x = (int)receive(xch);	// x <- xch
+	int x = (int)recv(xch);		// x <- xch
 
 	printf("%d\n", x);
 
