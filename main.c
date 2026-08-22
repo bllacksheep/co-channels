@@ -1,11 +1,13 @@
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct chan {
 	pthread_mutex_t mu;
 	pthread_cond_t sent, ready;
 
 	void *data;
-	int received
+	int received;
 	int has_receiver;
 } unbuffered_t;
 
@@ -23,7 +25,7 @@ void send(unbuffered_t *chan, void *data) {
 	pthread_cond_signal(&chan->ready);
 
 	while (chan->received != 1) {
-		pthread_cond_wait(&chan->sent, &mu);
+		pthread_cond_wait(&chan->sent, &chan->mu);
 	}
 
 	chan->data = NULL;
@@ -41,7 +43,7 @@ void *recv(unbuffered_t *chan) {
 		pthread_cond_wait(&chan->ready, &chan->mu);
 	}
 	
-	int ret = *(chan->data);
+	void *ret = chan->data;
 
 	chan->has_receiver = 0;
 	chan->received = 1;
@@ -66,29 +68,30 @@ void *receiver(void *chan)
 	return data;
 }
 
+// (void*)(intptr_t)42; // or why computers are cool
 
 int main()
 {
 	unbuffered_t ch = {
-        	.mu = PTHREAD_MUTEX_INITIALIZER;
-        	.sent = PTHREAD_COND_INITIALIZER;
-		.ready = PTHREAD_COND_INITIALIZER;
+        	.mu = PTHREAD_MUTEX_INITIALIZER,
+        	.sent = PTHREAD_COND_INITIALIZER,
+		.ready = PTHREAD_COND_INITIALIZER,
 
-        	.data = NULL;
-        	.has_receiver = 0;
-        	.received = 0;
+        	.data = NULL,
+        	.has_receiver = 0,
+        	.received = 0,
 	};
 	
 	pthread_t send_tid, recv_tid;
 
-	pthread_create(send_tid, NULL, sender, ch);
-	pthread_create(recv_tid, NULL, receiver, ch);
+	pthread_create(&send_tid, NULL, sender, (void *)&ch);
+	pthread_create(&recv_tid, NULL, receiver, (void *)&ch);
 	
 	int *data = NULL;
 	pthread_join(send_tid, NULL);
-	pthread_join(revc_tid, &data);
+	pthread_join(recv_tid, (void **)&data);
 
-	printf("got: %d\n", data);
+	printf("got: %d\n", *data);
 
 	free(data);
 	return 0;
