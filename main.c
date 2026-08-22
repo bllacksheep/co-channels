@@ -52,6 +52,7 @@ void *recv(unbuffered_t *chan) {
 	pthread_cond_signal(&chan->sent);
 
 	pthread_mutex_unlock(&chan->mu);
+	printf("%d <- ch\n", *((int*)ret));
 	return ret;
 }
 
@@ -93,7 +94,7 @@ int main()
 	pthread_join(send_tid, NULL);
 	pthread_join(recv_tid, (void **)&data);
 
-	printf("%d <- ch\n", *data);
+	printf("got: %d\n", *data);
 
 	free(data);
 	return 0;
