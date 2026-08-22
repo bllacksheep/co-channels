@@ -15,7 +15,6 @@ void send(unbuffered_t *chan, void *data) {
 	pthread_mutex_lock(&chan->mu);
 
 	chan->data = data;
-
 	printf("ch <- %d\n", *((int*)chan->data));
 
 	// blocks
@@ -46,13 +45,13 @@ void *recv(unbuffered_t *chan) {
 	}
 	
 	void *ret = chan->data;
+	printf("%d <- ch\n", *((int*)ret));
 
 	chan->has_receiver = 0;
 	chan->received = 1;
 	pthread_cond_signal(&chan->sent);
 
 	pthread_mutex_unlock(&chan->mu);
-	printf("%d <- ch\n", *((int*)ret));
 	return ret;
 }
 
