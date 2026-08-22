@@ -31,12 +31,10 @@ void send(unbuffered_t *chan, void *data) {
 }
 
 void *recv(unbuffered_t *chan) {
-	// lock
 	pthread_mutex_lock(&chan->mu);
 
 	chan->has_receiver = true;
 
-	// unblocks
 	pthread_cond_signal(&chan->ready);
 	
 	while (chan->data == NULL) {
@@ -50,13 +48,28 @@ void *recv(unbuffered_t *chan) {
 	pthread_cond_signal(&chan->sent);
 
 	pthread_mutex_unlock(&chan->mu);
-	// unlock
 	return ret;
 }
 
+void *sender(void *arg)
+{
+	unbuffered_t *chan = (unbuffered_t *)arg;
+	int *data = (int*)malloc(sizeof(int));
+	*data = 1;
+	send(chan, (void*)data);			// xch <- 1
+	return NULL;
+}
+
+void *receiver(void *chan)
+{
+	void *data = (void *)recv(chan);		// x <- xch
+	return data;
+}
+
+
 int main()
 {
-	unbuffered_t *xch = {
+	unbuffered_t ch = {
         	.mu = PTHREAD_MUTEX_INITIALIZER;
         	.sent = PTHREAD_COND_INITIALIZER;
 		.ready = PTHREAD_COND_INITIALIZER;
@@ -66,11 +79,17 @@ int main()
         	.received = 0;
 	};
 	
-	send(xch, (void*)1);		// xch <- 1
+	pthread_t send_tid, recv_tid;
 
-	int x = (int)recv(xch);		// x <- xch
+	pthread_create(send_tid, NULL, sender, ch);
+	pthread_create(recv_tid, NULL, receiver, ch);
+	
+	int *data = NULL;
+	pthread_join(send_tid, NULL);
+	pthread_join(revc_tid, &data);
 
-	printf("%d\n", x);
+	printf("got: %d\n", data);
 
+	free(data);
 	return 0;
 }
