@@ -16,6 +16,8 @@ void send(unbuffered_t *chan, void *data) {
 
 	chan->data = data;
 
+	printf("ch <- %d\n", *((int*)chan->data));
+
 	// blocks
 	while (chan->has_receiver != 1) {
 		pthread_cond_wait(&chan->ready, &chan->mu);
@@ -57,7 +59,7 @@ void *sender(void *arg)
 {
 	unbuffered_t *chan = (unbuffered_t *)arg;
 	int *data = (int*)malloc(sizeof(int));
-	*data = 1;
+	*data = 42;
 	send(chan, (void*)data);			// xch <- 1
 	return NULL;
 }
@@ -91,7 +93,7 @@ int main()
 	pthread_join(send_tid, NULL);
 	pthread_join(recv_tid, (void **)&data);
 
-	printf("got: %d\n", *data);
+	printf("%d <- ch\n", *data);
 
 	free(data);
 	return 0;
