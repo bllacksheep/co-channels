@@ -1,56 +1,69 @@
 #include <pthread.h>
 
 typedef struct chan {
-	pthread_mutex_t lock;
-	pthread_cond_t send_done, recv_ready;
+	pthread_mutex_t mu;
+	pthread_cond_t sent, ready;
 
 	void *data;
-	int done;
-	int listening;
+	int received
+	int has_receiver;
 } unbuffered_t;
 
 void send(unbuffered_t *chan, void *data) {
-	// lock
-	pthread_mutex_lock(&chan->lock);
+	pthread_mutex_lock(&chan->mu);
 
 	chan->data = data;
 
-	while (!chan->listening) {
-		pthread_cond_wait(&chan->revc_ready, &chan->lock);
+	// blocks
+	while (chan->has_receiver != 1) {
+		pthread_cond_wait(&chan->ready, &chan->mu);
 	}
 
-	chan->done = 0;
-	pthread_cond_signal(&chan->revc_ready);
+	chan->received = 0;
+	pthread_cond_signal(&chan->ready);
 
-	while (!chan->done) {
-		pthread_cond_wait(&chan->send_done, &lock);
+	while (chan->received != 1) {
+		pthread_cond_wait(&chan->sent, &mu);
 	}
 
 	chan->data = NULL;
-	pthread_mutex_unlock(&chan->lock);
-	// unlock
+	pthread_mutex_unlock(&chan->mu);
 }
 
-// can I use <- for this
 void *recv(unbuffered_t *chan) {
 	// lock
-	pthread_mutex_lock(&chan->lock);
-	
+	pthread_mutex_lock(&chan->mu);
 
-	pthread_mutex_unlock(&chan->lock);
+	chan->has_receiver = true;
+
+	// unblocks
+	pthread_cond_signal(&chan->ready);
+	
+	while (chan->data == NULL) {
+		pthread_cond_wait(&chan->ready, &chan->mu);
+	}
+	
+	int ret = *(chan->data);
+
+	chan->has_receiver = 0;
+	chan->received = 1;
+	pthread_cond_signal(&chan->sent);
+
+	pthread_mutex_unlock(&chan->mu);
 	// unlock
-	return;
+	return ret;
 }
 
 int main()
 {
 	unbuffered_t *xch = {
-        	.lock = ;
-        	.send_done = ;
-		.recv_ready = ;
+        	.mu = PTHREAD_MUTEX_INITIALIZER;
+        	.sent = PTHREAD_COND_INITIALIZER;
+		.ready = PTHREAD_COND_INITIALIZER;
+
         	.data = NULL;
-        	.done = 0;
-        	.listening = 0;
+        	.has_receiver = 0;
+        	.received = 0;
 	};
 	
 	send(xch, (void*)1);		// xch <- 1
